@@ -21,8 +21,8 @@ class Configuration:
 
 # Definition of different Configurations
 def getConfig_SMP1051(projectName):
-    config_SMP1051 = Configuration(eedPath = '../../_Data/SMP_1051/',
-                                   eecPath = '../../_Data/SMP_1051/1051_fr_eec.csv',
+    config_SMP1051 = Configuration(eedPath = 'C:/Users/Danie/Nextcloud/Data/SMP_1051/',
+                                   eecPath = 'C:/Users/Danie/Nextcloud/Data/SMP_1051/1051_fr_eec.csv',
                                    datasetNumber = '1051',
                                    projectName = projectName)
     return config_SMP1051

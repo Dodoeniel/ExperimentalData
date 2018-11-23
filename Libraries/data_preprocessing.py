@@ -13,8 +13,8 @@ import random
 import collections
 import pandas as pd
 
-import tsfresh
-import tsfresh.utilities.dataframe_functions as tsfreshUtil
+#import tsfresh
+#import tsfresh.utilities.dataframe_functions as tsfreshUtil
 
 import logging
 
@@ -409,6 +409,17 @@ def getSmoothingWindowSizeForColumn(columnname):
         windowSize = defaultWindowSize
 
     return  windowSize
+
+
+# Daniels functions
+def omitDataChannels(X_ts, channel_names):
+    """
+    Drops specific columns from the data set
+    :param X_ts: all operational parameter data Nadines Format X_ts
+    :param channel_names: vector of not wanted channels by name
+    :return: X_ts with omitted columns
+    """
+    return(X_ts.drop(channel_names, axis=1))
 
 
 # Log Functions
