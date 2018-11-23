@@ -412,7 +412,7 @@ def getSmoothingWindowSizeForColumn(columnname):
 
 
 # Daniels functions
-def omitDataChannels(X_ts, channel_names):
+def dropDataChannels(X_ts, channel_names):
     """
     Drops specific columns from the data set
     :param X_ts: all operational parameter data Nadines Format X_ts

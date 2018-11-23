@@ -17,11 +17,6 @@ for config in configurations:
     # Import verified Time Series Data
     X_ts, labels = dataImport.loadVerifiedBrakeData(config.eedPath, config.eecPath, config.datasetNumber)
 
-    # Smoothing of Time Series Data
-    X_ts_smoothed = dataPreproc.smoothingEedData(X_ts)
-
-    # Documentation
-    pickling.writeDataToPickle(X_ts, config.picklePath + '/X_ts')
-    pickling.writeDataToPickle(labels, config.picklePath + '/labels')
-
-    logSetup.resetLogConfigurations()  # to get a new logfile for next configuration
+    dropChannels = ['stopId', 'time', 'trg1', 'n1', 'trot1', 'tlin1', 'tlin2', 'tamb1']
+    X_ts = dataPreproc.dropDataChannels(X_ts, dropChannels)
+    print(X_ts)
