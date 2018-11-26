@@ -12,6 +12,7 @@
 import random
 import collections
 import pandas as pd
+import numpy as np
 
 #import tsfresh
 #import tsfresh.utilities.dataframe_functions as tsfreshUtil
@@ -416,10 +417,47 @@ def dropDataChannels(X_ts, channel_names):
     """
     Drops specific columns from the data set
     :param X_ts: all operational parameter data Nadines Format X_ts
+    @author: Daniel
     :param channel_names: vector of not wanted channels by name
     :return: X_ts with omitted columns
     """
     return(X_ts.drop(channel_names, axis=1))
+
+
+def  getTimeDistributedLabels(eec_data,X_ts, flag=0):
+    """
+    extends the labels towards time distributedLabels,
+    flag for type of labeling: 0,1
+    :return:
+    """
+    FLAG1 = 0  # Flag for binary classification, y/n
+    FLAG2 = 1  # Flag for classification with uprising downgoing
+
+    labels = X_ts['StopId']
+    labels['label'] = pd.Series(np.zeros(len(labels['StopId']), 1), index=labels.index)
+
+    for i in eec_data.index:
+        stopId = eec_data.get_value(i, 'StopId')    # fastes way to iterate
+        if not eec_data(['d_1']).isnull:
+            nrSqueals = 0
+            while True:
+                # iterate of all possible squealing
+                nrSqueals += 1
+                if not eec_data(['d_'+str(nrSqueals)]).isnull:
+                    start = eec_data['time_' + str(nrSqueals) + '&start']
+                    stop = eec_data['time_' + str(nrSqueals) + '&end']
+                else:
+                    # break if no squealing occurs
+                    break
+                # find indexes of time steps with noise in it
+                # possible alternative with between() or query()
+                indexes = X_ts.index[(X_ts['StopId'] == stopId) & (X_ts['time'] >= start) & (X_ts['time'] <= stop)]
+                labels[indexes] = np.ones(len(indexes), 1)
+                #for l in len(indexes):# TODO schöner machen
+                #    labels[indexes(l)] = 1
+
+
+
 
 
 # Log Functions
