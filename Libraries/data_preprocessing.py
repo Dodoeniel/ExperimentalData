@@ -13,6 +13,7 @@ import random
 import collections
 import pandas as pd
 import numpy as np
+import math
 
 #import tsfresh
 #import tsfresh.utilities.dataframe_functions as tsfreshUtil
@@ -424,7 +425,7 @@ def dropDataChannels(X_ts, channel_names):
     return(X_ts.drop(channel_names, axis=1))
 
 
-def  getTimeDistributedLabels(eec_data,X_ts, flag=0):
+def getTimeDistributedLabels(eec_data,X_ts, flag=0):
     """
     extends the labels towards time distributedLabels,
     flag for type of labeling: 0,1
@@ -432,31 +433,44 @@ def  getTimeDistributedLabels(eec_data,X_ts, flag=0):
     """
     FLAG1 = 0  # Flag for binary classification, y/n
     FLAG2 = 1  # Flag for classification with uprising downgoing
+    try:
+        labels = pd.DataFrame({'stopId': X_ts['stopId'],
+                               'time': X_ts['time'],
+                               'label': np.zeros((len(X_ts['stopId']),))})
+    except KeyError:
+        print('KeyError intercepted. \n Make sure stopId is included in the X_ts data')
 
-    labels = X_ts['StopId']
-    labels['label'] = pd.Series(np.zeros(len(labels['StopId']), 1), index=labels.index)
-
-    for i in eec_data.index:
-        stopId = eec_data.get_value(i, 'StopId')    # fastes way to iterate
-        if not eec_data(['d_1']).isnull:
+    for i in eec_data.index: # iterate over eec_date to find different StopIds
+        stopId = eec_data.get_value(i, 'stopId') # get associated stopId
+        index_eec = eec_data.index[eec_data['stopId'] == stopId].tolist()[0] # get associated index
+        if not np.isnan(eec_data.get_value(index_eec, 'd_1')): # check whether squealing occured
+            # iterate all possible squealing
             nrSqueals = 0
             while True:
-                # iterate of all possible squealing
                 nrSqueals += 1
-                if not eec_data(['d_'+str(nrSqueals)]).isnull:
-                    start = eec_data['time_' + str(nrSqueals) + '&start']
-                    stop = eec_data['time_' + str(nrSqueals) + '&end']
+                if not np.isnan(eec_data.get_value(index_eec, 'd_'+str(nrSqueals))):
+                    start = eec_data.get_value(index_eec, 'time_' + str(nrSqueals) + '_start')
+                    stop = eec_data.get_value(index_eec, 'time_' + str(nrSqueals) + '_end')
                 else:
                     # break if no squealing occurs
                     break
                 # find indexes of time steps with noise in it
                 # possible alternative with between() or query()
-                indexes = X_ts.index[(X_ts['StopId'] == stopId) & (X_ts['time'] >= start) & (X_ts['time'] <= stop)]
-                labels[indexes] = np.ones(len(indexes), 1)
-                #for l in len(indexes):# TODO schöner machen
-                #    labels[indexes(l)] = 1
+                labels.loc[(labels['stopId'] == stopId) & (labels['time'] >= start) & (labels['time'] <= stop), 'label'] = 1
+    return labels
 
 
+def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
+
+    for stopId in X_ts['stopId'].unique():
+        X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
+        label_snippet = labels.loc[labels['stopId'] == stopId]
+        X_sliced = pd.DataFrame()
+        labels_sliced = pd.DataFrame()
+        if len(X_snippet) >= w_length:
+            hop = 0;
+            while True:
+                X_sliced.append(X_snippet[hop*hop_size:hop*hop_size+w_length])
 
 
 
