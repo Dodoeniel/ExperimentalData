@@ -40,5 +40,6 @@ for config in configurations:
         X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
         label_snippet = labels.loc[labels['stopId'] == stopId]
         if len(X_snippet) >= w_length or (len(X_snippet) < w_length and discard == 0):
+            X_snippet.drop(X_snippet.Index[(X_snippet['time']<truncate[0])].toList())
 
     k = 1

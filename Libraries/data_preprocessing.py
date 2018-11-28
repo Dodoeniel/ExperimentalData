@@ -490,8 +490,8 @@ def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
                 curr_X['sliceId'] = pd.Series(sliceId, index=curr_X.index)
                 X_sliced = pd.concat([X_sliced, curr_X])
 
-            if (len(X_snippet)-w_length) % hop_size > 0 & discard == 0: # remainder of windowed function
-
+            # remainder of windowed function or window bigger than original signal
+            if (len(X_snippet)-w_length) % hop_size > 0 & discard == 0:
                 if hop != 0:
                     hop += 1
                     curr_label = label_snippet[hop * hop_size + w_length:]
@@ -501,7 +501,6 @@ def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
                     curr_X = X_snippet
 
                 sliceId = stopId + '_' + str(hop)
-
                 curr_label.index = range(len(curr_label))
                 zero_padding = pd.DataFrame(np.zeros(((w_length - len(curr_label)), curr_label.shape[1])),
                                             index=range(len(curr_label), w_length),
