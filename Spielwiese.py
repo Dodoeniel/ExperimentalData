@@ -30,16 +30,6 @@ for config in configurations:
     w_length = 100
     hop_size = 10
 
-    X_sliced, labels_sliced = dataPreproc.sliceData(X_ts, labels, w_length, hop_size, discard)
-
-    truncate = [1, 1, 1]
-    X_trunc = pd.DataFrame()
-    labels_trunc = pd.DataFrame()
-    for stopId in X_ts['stopId'].unique():
-        # get the one series that shall be truncated
-        X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
-        label_snippet = labels.loc[labels['stopId'] == stopId]
-        if len(X_snippet) >= w_length or (len(X_snippet) < w_length and discard == 0):
-            X_snippet.drop(X_snippet.Index[(X_snippet['time']<truncate[0])].toList())
+    X_trunc, label_trunc = dataPreproc.truncate_all(X_ts, labels, 0.1, 'center')
 
     k = 1

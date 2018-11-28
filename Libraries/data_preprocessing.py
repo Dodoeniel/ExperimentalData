@@ -460,19 +460,27 @@ def getTimeDistributedLabels(eec_data,X_ts, flag=0):
     return labels
 
 
-def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
+def windowData_all(X_ts, labels, w_length, hop_size, discard=True):
+    """
+    Hops with a window over all data and returns windowed data
+    :param X_ts: Data in Nadines data format
+    :param labels: time distributed labels
+    :param w_length: window length
+    :param hop_size: hop size
+    :param discard: Boolean, discard to small signals and remains
+    :return: windowed Data and labels
+    """
     # pre define output
     X_sliced = pd.DataFrame()
     labels_sliced = pd.DataFrame()
     for stopId in X_ts['stopId'].unique():
-        # get the one series that shall be sliced
+        # get the current series that shall be sliced
         X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
         label_snippet = labels.loc[labels['stopId'] == stopId]
-
-        if len(X_snippet) >= w_length or (len(X_snippet) < w_length and discard == 0):
-            hop = 0
+        # check length of signals
+        if len(X_snippet) >= w_length or (len(X_snippet) < w_length and discard):
+            hop = 0 # number of hops done
             for hop in range((len(X_snippet)-w_length)//hop_size):
-
                 # create Ids for sliced TS:  1.051_0 .... 1.051_0 1.051_1 .... 1.051_1
                 sliceId = []
                 for i in range(w_length):
@@ -491,7 +499,7 @@ def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
                 X_sliced = pd.concat([X_sliced, curr_X])
 
             # remainder of windowed function or window bigger than original signal
-            if (len(X_snippet)-w_length) % hop_size > 0 & discard == 0:
+            if (len(X_snippet)-w_length) % hop_size > 0 & discard:
                 if hop != 0:
                     hop += 1
                     curr_label = label_snippet[hop * hop_size + w_length:]
@@ -520,6 +528,66 @@ def sliceData(X_ts, labels, w_length, hop_size, discard=1, type=1):
                 X_sliced = pd.concat([X_sliced, curr_X])
     return X_sliced, labels_sliced
 
+
+def removeTime_single(X_ts, labels, truncate, stopId):
+    # get the one series that shall be truncated
+    X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
+    label_snippet = labels.loc[labels['stopId'] == stopId]
+    middleTime = X_snippet.get_value(len(X_snippet) // 2, 'time')
+    X_snippet = X_snippet.drop(np.where((X_snippet['time'] < truncate[0])
+                                        | (X_snippet['time'] > X_snippet.get_value(len(X_snippet) - 1, 'time') - truncate[2])
+                                        | ((X_snippet['time'] >= middleTime - 0.5 * truncate[1])
+                                           & (X_snippet['time'] < middleTime + 0.5 * truncate[1])))[0])
+    label_snippet = label_snippet.drop(np.where((label_snippet['time'] < truncate[0])
+                                        | (label_snippet['time'] > label_snippet.get_value(len(label_snippet) - 1, 'time') - truncate[2])
+                                        | ((label_snippet['time'] >= middleTime - 0.5 * truncate[1])
+                                           & (label_snippet['time'] < middleTime + 0.5 * truncate[1])))[0])
+    return X_snippet, label_snippet
+
+
+def removeTime_all(X_ts, labels, truncate):
+    X_snippet = pd.DataFrame()
+    labels_snippet = pd.DataFrame()
+    for stopId in X_ts['stopId'].unique():
+        X_single, label_single = removeTime_single(X_ts, labels, truncate, stopId)
+        X_snippet = pd.concat([X_snippet, X_single])
+        labels_snippet = pd.concat([labels_snippet, label_single])
+    return X_snippet, labels_snippet
+
+
+def truncate_single(X_single, label_single, duration, part):
+    CENTER = 'center'
+    FIRST = 'first'
+    LAST = 'last'
+    X_truncated = pd.DataFrame()
+    labels_truncated = pd.DataFrame()
+    if part == CENTER:
+        middleTime = X_single.get_value(len(X_single) // 2, 'time')
+        X_truncated = X_single.loc[(X_single['time'] >= middleTime - 0.5*duration)
+                                   & (X_single['time'] <= middleTime + 0.5*duration)]
+        labels_truncated = label_single.loc[(label_single['time'] >= middleTime - 0.5 * duration)
+                                   & (label_single['time'] <= middleTime + 0.5 * duration)]
+    elif part == FIRST:
+        X_truncated = X_single.loc[X_single['time'] <= duration]
+        labels_truncated = label_single.loc[label_single['time'] <= duration]
+    elif part == LAST:
+        X_truncated = X_single.loc[X_single['time'] >= X_single.get_value(len(X_single)-1, 'time') - duration]
+        labels_truncated = label_single.loc[label_single['time'] >= label_single.get_value(len(label_single)-1, 'time') - duration]
+    else:
+        v = 1 # TODO do exception
+
+    return X_truncated, labels_truncated
+
+
+def truncate_all(X_ts, labels, duration, part):
+    X_truncated = pd.DataFrame()
+    labels_truncated = pd.DataFrame()
+    for stopId in X_ts['stopId'].unique():
+        X_single, label_single = truncate_single(X_ts.loc[X_ts['stopId'] == stopId],
+                                                 labels.loc[labels['stopId'] == stopId], duration, part)
+        X_truncated = pd.concat([X_truncated, X_single])
+        labels_truncated = pd.concat([labels_truncated, label_single])
+    return X_truncated, labels_truncated
 
 
 # Log Functions
