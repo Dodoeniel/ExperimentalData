@@ -530,6 +530,14 @@ def windowData_all(X_ts, labels, w_length, hop_size, discard=True):
 
 
 def removeTime_single(X_ts, labels, truncate, stopId):
+    """
+    TODO Obsolete
+    :param X_ts:
+    :param labels:
+    :param truncate:
+    :param stopId:
+    :return:
+    """
     # get the one series that shall be truncated
     X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
     label_snippet = labels.loc[labels['stopId'] == stopId]
@@ -546,6 +554,13 @@ def removeTime_single(X_ts, labels, truncate, stopId):
 
 
 def removeTime_all(X_ts, labels, truncate):
+    """
+    TODO Obsolete
+    :param X_ts:
+    :param labels:
+    :param truncate:
+    :return:
+    """
     X_snippet = pd.DataFrame()
     labels_snippet = pd.DataFrame()
     for stopId in X_ts['stopId'].unique():
@@ -555,39 +570,154 @@ def removeTime_all(X_ts, labels, truncate):
     return X_snippet, labels_snippet
 
 
-def truncate_single(X_single, label_single, duration, part):
+def truncate_single(X_single, label_single, duration, location, discard):
+    """
+    @author truncation of a single time series for usage in truncate_all
+    :param X_single:
+    :param label_single:
+    :param duration:
+    :param location:
+    :param discard:
+    :return:
+    """
     CENTER = 'center'
     FIRST = 'first'
     LAST = 'last'
     X_truncated = pd.DataFrame()
     labels_truncated = pd.DataFrame()
-    if part == CENTER:
+
+    ### do truncation based on flag
+    if location == CENTER:
         middleTime = X_single.get_value(len(X_single) // 2, 'time')
         X_truncated = X_single.loc[(X_single['time'] >= middleTime - 0.5*duration)
                                    & (X_single['time'] <= middleTime + 0.5*duration)]
         labels_truncated = label_single.loc[(label_single['time'] >= middleTime - 0.5 * duration)
                                    & (label_single['time'] <= middleTime + 0.5 * duration)]
-    elif part == FIRST:
+    elif location == FIRST:
         X_truncated = X_single.loc[X_single['time'] <= duration]
         labels_truncated = label_single.loc[label_single['time'] <= duration]
-    elif part == LAST:
+    elif location == LAST:
         X_truncated = X_single.loc[X_single['time'] >= X_single.get_value(len(X_single)-1, 'time') - duration]
         labels_truncated = label_single.loc[label_single['time'] >= label_single.get_value(len(label_single)-1, 'time') - duration]
     else:
         v = 1 # TODO do exception
 
-    return X_truncated, labels_truncated
+
+    # check whether time series is long enough for duration
+    if X_truncated.get_value(len(X_truncated)-1, 'time')-X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
+        return X_truncated, labels_truncated
+    # if it is to short and discard flag is set to zero --> zero padding
+    elif not discard:
+        while True:
+            zero_padding = pd.DataFrame(np.zeros((1, X_truncated.shape[1])), columns=X_truncated.columns.values.tolist())
+            X_truncated = X_truncated.append(zero_padding, ignore_index=True)
+            zero_padding = pd.DataFrame(np.zeros((1, labels_truncated.shape[1])), columns=labels_truncated.columns.values.tolist())
+            labels_truncated = labels_truncated.append(zero_padding, ignore_index=True)
+            if X_truncated.get_value(len(X_truncated) - 1, 'time') - X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
+                break
+        return X_truncated, labels_truncated
+    # else return nan
+    else:
+        return np.nan, np.nan
 
 
-def truncate_all(X_ts, labels, duration, part):
+def truncate_all(X_ts, labels, duration, part, discard=True):
+    """
+    @author: Daniel
+    truncates data as well as labels based on a duration [s] and a flag indicating which part of the signal shall be used.
+    Three options can be called 'first', 'center', 'last'
+    :param X_ts: Pandas Dataframe of time series
+    :param labels: labels in a Pandas Dataframe format as from get TimeDistributedLabels()
+    :param duration: duration of the truncated signal in seconds
+    :param part: string either 'first', 'center' or 'last'
+    :param discard: not recommended to set to False as zero padding is not implemented efficiently
+    :return: truncated time series in Dataframe format
+    """
     X_truncated = pd.DataFrame()
     labels_truncated = pd.DataFrame()
+    # iterate over all time sersies
     for stopId in X_ts['stopId'].unique():
+        # call function that truncates a single time series and distributed label
         X_single, label_single = truncate_single(X_ts.loc[X_ts['stopId'] == stopId],
-                                                 labels.loc[labels['stopId'] == stopId], duration, part)
-        X_truncated = pd.concat([X_truncated, X_single])
-        labels_truncated = pd.concat([labels_truncated, label_single])
+                                                 labels.loc[labels['stopId'] == stopId], duration, part, discard)
+        # adding truncated time series and label to data frame, if not nan (to short for window)
+        if not np.isnan(X_single):
+            X_truncated = pd.concat([X_truncated, X_single])
+            labels_truncated = pd.concat([labels_truncated, label_single])
     return X_truncated, labels_truncated
+
+
+def reduceLabel(labels_distributed):
+    """
+    @author: Daniel
+    reduces time distributed labels back to a single label for a time series, based on either its stop id or its
+    windowed sliceId
+    :param labels_distributed: in the output format of getTimeDistributedLabels()
+    :return: Pandas Format Labels
+    """
+    COLUMN_ID = 'stopId'
+    if 'sliceId' in labels_distributed.columns: # if windowed signals are used, the id is switched to the sliceId
+        COLUMN_ID = 'sliceId'
+    index = 0
+    labels_single = pd.DataFrame(columns=[COLUMN_ID, 'label'])
+    # iterate over all unique IDs
+    for id in labels_distributed[COLUMN_ID].unique():
+        # for each id the maximum of the label function is searched, resulting in either 0 or 1
+        maximum = max(labels_distributed.loc[labels_distributed[COLUMN_ID] == id, 'label'])
+        labels_single.loc[id] = [id, maximum]
+        index += 1
+    return labels_single
+
+
+def shape_Data_to_LSTM_format(X_ts, dropChannels=['stopId', 'time']):
+    """
+    @author: Daniel
+    shapes data sets from Pandas Dataformat into numpy array format, needed for training LSTM network.
+    with a vector containing strings with column names specific columns can be dropped. at least the stopId and time should
+    be dropped as they do not contain relevant information for training
+    :param X_ts: Pandas Dataframe format
+    :param dropChannels: list of strings
+    :return: 3D array of data in the format [samples, timestepts, features]
+    """
+    COLUMN_ID = 'stopId'
+    if 'sliceId' in X_ts.columns:   # if windowed signals are used, the id is switched to the sliceId
+        COLUMN_ID = 'sliceId'
+        dropChannels.append(COLUMN_ID)  # add sliceId to drop list
+    sample = 0
+    X_numpy = []
+    for id in X_ts[COLUMN_ID].unique():
+        # drop unnecessary columns and then take values with pandas values attribute
+        X_numpy.append(np.array(dropDataChannels(X_ts.loc[X_ts[COLUMN_ID] == id], dropChannels).values))
+    return np.array(X_numpy)
+
+
+def shape_Labels_to_LSTM_format(labels):
+    """
+    @author: Daniel
+    shapes data into numpy format, fit for LSTM training. Labels can be inputed as single label, resulting in a
+    one dimensional output (needed for a Dense Layer, following a Flatten Layer). If Time-Distributed labels are inputed
+    a three-dimensional array is outputed, needed for a TimeDistributed(Dense()) Layer
+    :param labels: Pandas data frame formated labels
+    :return: labels in numpy format
+    """
+    COLUMN_ID = 'stopId'
+    label_numpy = []
+    if 'sliceId' in labels.columns:         # if windowed signals are used, the id is switched to the sliceId
+        COLUMN_ID = 'sliceId'
+
+    # iterate over all unique values
+    for id in labels[COLUMN_ID].unique():
+        # add labels as read from the dataframe
+        label_numpy.append(np.array(labels.loc[labels[COLUMN_ID] == id, 'label']))
+    # transform list into numpy array
+    v = np.array(label_numpy)
+    if v.shape[1] != 1:
+        # reshape into 3D array [samples, timestepts, features]
+        return v.reshape((v.shape[0], v.shape[1], 1))
+    else:
+        # otherwise 1D
+        return v
+
 
 
 # Log Functions
