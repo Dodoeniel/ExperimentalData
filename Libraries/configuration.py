@@ -21,18 +21,18 @@ class Configuration:
 
 # Definition of different Configurations
 def getConfig_SMP1051(projectName):
-    config_SMP1051 = Configuration(eedPath = 'C:/Users/Danie/Nextcloud/Data/SMP_1051/',
-                                   eecPath = 'C:/Users/Danie/Nextcloud/Data/SMP_1051/1051_fr_eec.csv',
+    config_SMP1051 = Configuration(eedPath = '/media/computations/DATA/ExperimentalData/SMP_1051/',
+                                   eecPath = '/media/computations/DATA/ExperimentalData/SMP_1051/1051_fr_eec.csv',
                                    datasetNumber = '1051',
                                    projectName = projectName)
     return config_SMP1051
 
-def getConfig_1085(projectName):
-    config_1085 = Configuration(eedPath= '../../_Data/1085/eeds/',
-                                eecPath= '../../_Data/1085/1085_offlinedetection_detection1_validation3_fl_eec.csv',
-                                datasetNumber = '1085',
+def getConfig_vereinfacht(projectName):
+    config_vereinfacht = Configuration(eedPath = '/media/computations/DATA/ExperimentalData/Vereinfacht/',
+                                eecPath = '/media/computations/DATA/ExperimentalData/Vereinfacht/1051_fr_eec.csv',
+                                datasetNumber = '1051',
                                 projectName=projectName)
-    return  config_1085
+    return  config_vereinfacht
 
 def getConfig_1093(projectName):
     config_1093 = Configuration(eedPath= '../../_Data/1093/eed/',
@@ -59,7 +59,7 @@ def getConfig(projectName, callDataset):
     """for parallel execution on cluster only"""
     myDict ={
         '1051': getConfig_SMP1051,
-        '1085': getConfig_1085,
+        #'1051': getConfig_vereinfacht,
         '1093': getConfig_1093,
         '1114': getConfig_1114,
         '1131': getConfig_1131,

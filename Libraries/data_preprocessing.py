@@ -425,7 +425,7 @@ def dropDataChannels(X_ts, channel_names):
     return(X_ts.drop(channel_names, axis=1))
 
 
-def getTimeDistributedLabels(eec_data,X_ts, flag=0):
+def getTimeDistributedLabels(eec_data, X_ts, flag=0):
     """
     extends the labels towards time distributedLabels,
     flag for type of labeling: 0,1
@@ -588,7 +588,7 @@ def truncate_single(X_single, label_single, duration, location, discard):
 
     ### do truncation based on flag
     if location == CENTER:
-        middleTime = X_single.get_value(len(X_single) // 2, 'time')
+        middleTime = X_single.get_value(X_single.last_valid_index() // 2, 'time')
         X_truncated = X_single.loc[(X_single['time'] >= middleTime - 0.5*duration)
                                    & (X_single['time'] <= middleTime + 0.5*duration)]
         labels_truncated = label_single.loc[(label_single['time'] >= middleTime - 0.5 * duration)
@@ -597,14 +597,14 @@ def truncate_single(X_single, label_single, duration, location, discard):
         X_truncated = X_single.loc[X_single['time'] <= duration]
         labels_truncated = label_single.loc[label_single['time'] <= duration]
     elif location == LAST:
-        X_truncated = X_single.loc[X_single['time'] >= X_single.get_value(len(X_single)-1, 'time') - duration]
-        labels_truncated = label_single.loc[label_single['time'] >= label_single.get_value(len(label_single)-1, 'time') - duration]
+        X_truncated = X_single.loc[X_single['time'] >= X_single.get_value(X_single.last_valid_index(), 'time') - duration]
+        labels_truncated = label_single.loc[label_single['time'] >= label_single.get_value(label_single.last_valid_index(), 'time') - duration]
     else:
         v = 1 # TODO do exception
 
 
     # check whether time series is long enough for duration
-    if X_truncated.get_value(len(X_truncated)-1, 'time')-X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
+    if X_truncated.get_value(X_truncated.last_valid_index(), 'time')-X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
         return X_truncated, labels_truncated
     # if it is to short and discard flag is set to zero --> zero padding
     elif not discard:
@@ -613,12 +613,12 @@ def truncate_single(X_single, label_single, duration, location, discard):
             X_truncated = X_truncated.append(zero_padding, ignore_index=True)
             zero_padding = pd.DataFrame(np.zeros((1, labels_truncated.shape[1])), columns=labels_truncated.columns.values.tolist())
             labels_truncated = labels_truncated.append(zero_padding, ignore_index=True)
-            if X_truncated.get_value(len(X_truncated) - 1, 'time') - X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
+            if X_truncated.get_value(X_truncated.last_valid_index(), 'time') - X_truncated.get_value(X_truncated.first_valid_index(), 'time') >= duration:
                 break
         return X_truncated, labels_truncated
     # else return nan
     else:
-        return np.nan, np.nan
+        return pd.DataFrame(np.nan, index=[0], columns=['A']), pd.DataFrame(np.nan,  index=[0], columns=['A'])
 
 
 def truncate_all(X_ts, labels, duration, part, discard=True):
@@ -645,6 +645,34 @@ def truncate_all(X_ts, labels, duration, part, discard=True):
             X_truncated = pd.concat([X_truncated, X_single])
             labels_truncated = pd.concat([labels_truncated, label_single])
     return X_truncated, labels_truncated
+
+
+def truncate_differentiated(X_ts, labels, part, target_list, unique=True):
+    discard = True
+    same_length_list = list()
+    for i in range(len(target_list)):
+        target = target_list[i]
+        duration = target[0]
+        X_truncated = pd.DataFrame()
+        labels_truncated = pd.DataFrame()
+        # iterate over all time sersies
+        for stopId in X_ts['stopId'].unique():
+            X_curr = X_ts.loc[X_ts['stopId'] == stopId]
+            label_curr = labels.loc[labels['stopId'] == stopId]
+            check = X_curr.get_value(len(X_curr) - 1, 'time') >= target[0]
+            check2 = X_curr.get_value(len(X_curr) - 1, 'time') <= (target[0] + target[1])
+            if check & check2:
+                # call function that truncates a single time series and distributed label
+                X_single, label_single = truncate_single(X_curr, label_curr, target[0], part[i], discard)
+                # adding truncated time series and label to data frame, if not nan (to short for window)
+                if not X_single.isnull().values.any():
+                    X_truncated = pd.concat([X_truncated, X_single])
+                    labels_truncated = pd.concat([labels_truncated, label_single])
+                    if unique:
+                        X_ts.drop(X_ts.loc[X_ts['stopId'] == stopId].index.tolist())
+                        labels.drop(labels.loc[labels['stopId'] == stopId].index.tolist())
+        same_length_list.append((X_truncated, labels_truncated))
+    return same_length_list
 
 
 def reduceLabel(labels_distributed):
