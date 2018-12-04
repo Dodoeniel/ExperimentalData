@@ -687,14 +687,13 @@ def reduceLabel(labels_distributed):
     if 'sliceId' in labels_distributed.columns: # if windowed signals are used, the id is switched to the sliceId
         COLUMN_ID = 'sliceId'
     index = 0
-    labels_single = pd.DataFrame(columns=[COLUMN_ID, 'label'])
+    labels_single = list()
     # iterate over all unique IDs
     for id in labels_distributed[COLUMN_ID].unique():
         # for each id the maximum of the label function is searched, resulting in either 0 or 1
         maximum = max(labels_distributed.loc[labels_distributed[COLUMN_ID] == id, 'label'])
-        labels_single.loc[id] = [id, maximum]
-        index += 1
-    return labels_single
+        labels_single.append(maximum)
+    return pd.DataFrame(labels_single)
 
 
 def shape_Data_to_LSTM_format(X_ts, dropChannels=['stopId', 'time']):

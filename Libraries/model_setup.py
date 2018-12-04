@@ -2,19 +2,24 @@
 
 import tensorflow as tf
 from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import TimeDistributed
+from keras.layers import Flatten
+from keras.layers import Dense
 
-def getModelA():
+def distributed_label(input_shape):
     #model architecture
-    model = keras.Sequential([keras.layers.Dense(500, activation= tf.nn.sigmoid),
-                              keras.layers.Dense(200, activation= tf.nn.sigmoid),
-                              keras.layers.Dense(2,   activation= tf.nn.softmax)])
-
+    m = Sequential()
+    # m.add(Masking(mask_value=0., input_shape=(InputDataSet.shape[1], InputDataSet.shape[2])))
+    m.add(LSTM(8, return_sequences=True, input_shape=input_shape))
+    m.add(TimeDistributed(Dense(1, activation='sigmoid')))
+    # m.add(TimeDistributed(Flatten()))
+    # m.add(Flatten())
+    m.add(Dense(1, activation='sigmoid'))
     #specifies optimizer and lossfunctions
-    model.compile(optimizer=tf.train.AdamOptimizer(),
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
-
-    return model
+    m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    return m
 
 def getModelB():
     #model architecture
