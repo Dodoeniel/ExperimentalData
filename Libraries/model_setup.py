@@ -13,10 +13,12 @@ def distributed_label(input_shape):
     m = Sequential()
     # m.add(Masking(mask_value=0., input_shape=(InputDataSet.shape[1], InputDataSet.shape[2])))
     m.add(LSTM(8, return_sequences=True, input_shape=input_shape))
+    m.add(LSTM(16, return_sequences=True))
+    m.add(LSTM(8, return_sequences=True))
     m.add(TimeDistributed(Dense(1, activation='sigmoid')))
     # m.add(TimeDistributed(Flatten()))
     # m.add(Flatten())
-    m.add(Dense(1, activation='sigmoid'))
+    #m.add(Dense(1, activation='sigmoid'))
     #specifies optimizer and lossfunctions
     m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return m

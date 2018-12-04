@@ -17,7 +17,7 @@ from sklearn.metrics import confusion_matrix
 from keras.utils import plot_model
 
 
-file = open('Data', 'rb')
+file = open('FindArchitecture/Dataset_1051/picklefiles/Data', 'rb')
 Data = pickle.load(file)
 
 x = Data[0]
@@ -28,14 +28,14 @@ InputDataSet = pp.shape_Data_to_LSTM_format(Data[0][0], dropChannels)
 input_shape = (None, InputDataSet.shape[2])
 m = model_setup.distributed_label(input_shape)
 test_data = list()
-epochs = 1
+epochs = 100
 for currData in Data:
     seed = 0
     X = pp.shape_Data_to_LSTM_format(currData[0], dropChannels)
     y = pp.shape_Labels_to_LSTM_format(currData[1])
         #y = np.reshape(pp.reduceLabel(y).values, (X.shape[0], 1, 1))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
-    batch_size = 10
+    batch_size = 5
     if X_train.shape[0] >= 2:
         hist = m.fit(X_train, y_train, validation_split=0.2, epochs=epochs, batch_size=batch_size, verbose=2)
         test_data.append((X_test, y_test))

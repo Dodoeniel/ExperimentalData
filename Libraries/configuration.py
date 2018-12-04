@@ -1,7 +1,7 @@
 """Class for structured Summary of Setup Settings"""
 
 class Configuration:
-    def __init__(self, eedPath=None, eecPath=None, datasetNumber=None, projectName =None, X_featPathPickle=None, labelsPathPickle=None):
+    def __init__(self, eedPath=None, eecPath=None, datasetNumber=None, projectName =None, savePath=None, X_featPathPickle=None, labelsPathPickle=None):
         self.logTitle = 'Analysis of Brake Squeal Noise with feature based Neural Networks'
         self.logName = 'Logfile_NN'
 
@@ -9,6 +9,7 @@ class Configuration:
         self.projectName   = projectName    # Used as superior folder name
         self.eedPath = eedPath              # Path (without file name) where eed-Files are stored
         self.eecPath = eecPath              # Path (including filename) where eec-File is stored
+        self.savePath = savePath
 
         # Folder Structure per Dataset
         self.projectPath            = self.projectName
@@ -23,6 +24,7 @@ class Configuration:
 def getConfig_SMP1051(projectName):
     config_SMP1051 = Configuration(eedPath = '/media/computations/DATA/ExperimentalData/SMP_1051/',
                                    eecPath = '/media/computations/DATA/ExperimentalData/SMP_1051/1051_fr_eec.csv',
+                                   savePath = '/home/computations/ExperimentalData/',
                                    datasetNumber = '1051',
                                    projectName = projectName)
     return config_SMP1051
@@ -30,6 +32,7 @@ def getConfig_SMP1051(projectName):
 def getConfig_vereinfacht(projectName):
     config_vereinfacht = Configuration(eedPath = '/media/computations/DATA/ExperimentalData/Vereinfacht/',
                                 eecPath = '/media/computations/DATA/ExperimentalData/Vereinfacht/1051_fr_eec.csv',
+                                savePath='/home/computations/ExperimentalData/',
                                 datasetNumber = '1051',
                                 projectName=projectName)
     return  config_vereinfacht

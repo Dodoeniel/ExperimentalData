@@ -588,11 +588,16 @@ def truncate_single(X_single, label_single, duration, location, discard):
 
     ### do truncation based on flag
     if location == CENTER:
-        middleTime = X_single.get_value(X_single.last_valid_index() // 2, 'time')
-        X_truncated = X_single.loc[(X_single['time'] >= middleTime - 0.5*duration)
-                                   & (X_single['time'] <= middleTime + 0.5*duration)]
+        middleIndex = X_single.first_valid_index() + ((X_single.last_valid_index() - X_single.first_valid_index())//2)
+        middleTime = X_single.get_value(middleIndex, 'time')
+        startIndex = X_single.loc[X_single['time'] <= middleTime-0.5*duration].last_valid_index()
+        if startIndex > 0:  # a little bit hacky but improves robustness for cases where the lenght equals the duration
+            startIndex -= 1
+        startTime = X_single.get_value(startIndex, 'time')
+        X_truncated = X_single.loc[(X_single['time'] >= startTime)
+                                   & (X_single['time'] <= startTime + duration)]
         labels_truncated = label_single.loc[(label_single['time'] >= middleTime - 0.5 * duration)
-                                   & (label_single['time'] <= middleTime + 0.5 * duration)]
+                                   & (label_single['time'] <= middleTime + 0.5*duration)]
     elif location == FIRST:
         X_truncated = X_single.loc[X_single['time'] <= duration]
         labels_truncated = label_single.loc[label_single['time'] <= duration]
@@ -659,8 +664,8 @@ def truncate_differentiated(X_ts, labels, part, target_list, unique=True):
         for stopId in X_ts['stopId'].unique():
             X_curr = X_ts.loc[X_ts['stopId'] == stopId]
             label_curr = labels.loc[labels['stopId'] == stopId]
-            check = X_curr.get_value(len(X_curr) - 1, 'time') >= target[0]
-            check2 = X_curr.get_value(len(X_curr) - 1, 'time') <= (target[0] + target[1])
+            check = X_curr.get_value(X_curr.last_valid_index(), 'time') >= target[0]
+            check2 = X_curr.get_value(X_curr.last_valid_index(), 'time') <= (target[0] + target[1])
             if check & check2:
                 # call function that truncates a single time series and distributed label
                 X_single, label_single = truncate_single(X_curr, label_curr, target[0], part[i], discard)

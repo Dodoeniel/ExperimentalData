@@ -8,7 +8,7 @@ from Libraries import log_setup as logSetup
 
 
 
-projectName = 'FindArchitecture'
+projectName = 'DifferentiatedTruncation_1051'
 callDataset = '1051'
 config = configuration.getConfig(projectName, callDataset)
 
@@ -31,5 +31,5 @@ part = ['center', 'center', 'center', 'center', 'center', 'center', 'center', 'c
 Data = dataPreproc.truncate_differentiated(X_ts, labels, part, target_list)
 
 
-pickle.dump(Data, open(config.picklePath + '/Data', "wb"))
+pickle.dump(Data, open(config.savePath + projectName + '/Data.p', "wb"))
 
