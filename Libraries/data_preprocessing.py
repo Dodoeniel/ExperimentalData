@@ -14,6 +14,7 @@ import collections
 import pandas as pd
 import numpy as np
 import math
+import random
 
 #import tsfresh
 #import tsfresh.utilities.dataframe_functions as tsfreshUtil
@@ -424,6 +425,23 @@ def dropDataChannels(X_ts, channel_names):
     """
     return(X_ts.drop(channel_names, axis=1))
 
+def balanceDataDaniel(X_ts, labels, target):
+    # labels not time distributed
+    nrOnes = sum(labels.values)
+    nrZeros = len(labels.values) - nrOnes
+    drop_nr = nrZeros - (math.floor(nrOnes*100/target) - nrOnes)
+    while True:
+        indexToDrop = random.choice(labels.index.tolist())
+        if labels.get(indexToDrop) == 0:
+            labels = labels.drop(labels=indexToDrop)
+            X_ts = X_ts[X_ts.stopId != indexToDrop]
+            drop_nr -= 1
+        if drop_nr <= 0:
+            break
+    return X_ts, labels
+
+
+
 
 def getTimeDistributedLabels(eec_data, X_ts, flag=0):
     """
@@ -465,20 +483,29 @@ def windowData_all(X_ts, labels, w_length, hop_size, discard=True):
     Hops with a window over all data and returns windowed data
     :param X_ts: Data in Nadines data format
     :param labels: time distributed labels
-    :param w_length: window length
-    :param hop_size: hop size
+    :param w_length: window length in seconds
+    :param hop_size: hop size in seconds
     :param discard: Boolean, discard to small signals and remains
     :return: windowed Data and labels
     """
     # pre define output
     X_sliced = pd.DataFrame()
     labels_sliced = pd.DataFrame()
+
+    # transform w_length into number of steps
+    # TODO very hacky and not concurrent with later approaches
+    # get time step difference
+    diff = (X_ts.get_value(1, 'time') - X_ts.get_value(0, 'time'))[0]
+    # calculate integer of how many time steps are needed to fulfill w_length
+    w_length = math.floor(w_length/diff)
+    hop_size = math.floor(hop_size/diff)
     for stopId in X_ts['stopId'].unique():
         # get the current series that shall be sliced
+        # loc function used as access to the data frame
         X_snippet = X_ts.loc[X_ts['stopId'] == stopId]
         label_snippet = labels.loc[labels['stopId'] == stopId]
         # check length of signals
-        if len(X_snippet) >= w_length or (len(X_snippet) < w_length and discard):
+        if len(X_snippet) >= w_length or (len(X_snippet) < w_length and not discard):
             hop = 0 # number of hops done
             for hop in range((len(X_snippet)-w_length)//hop_size):
                 # create Ids for sliced TS:  1.051_0 .... 1.051_0 1.051_1 .... 1.051_1
@@ -499,7 +526,7 @@ def windowData_all(X_ts, labels, w_length, hop_size, discard=True):
                 X_sliced = pd.concat([X_sliced, curr_X])
 
             # remainder of windowed function or window bigger than original signal
-            if (len(X_snippet)-w_length) % hop_size > 0 & discard:
+            if ((len(X_snippet)-w_length) % hop_size > 0) & (not discard):
                 if hop != 0:
                     hop += 1
                     curr_label = label_snippet[hop * hop_size + w_length:]
@@ -674,8 +701,8 @@ def truncate_differentiated(X_ts, labels, part, target_list, unique=True):
                     X_truncated = pd.concat([X_truncated, X_single])
                     labels_truncated = pd.concat([labels_truncated, label_single])
                     if unique:
-                        X_ts.drop(X_ts.loc[X_ts['stopId'] == stopId].index.tolist())
-                        labels.drop(labels.loc[labels['stopId'] == stopId].index.tolist())
+                        X_ts = X_ts.drop(X_ts.loc[X_ts['stopId'] == stopId].index.tolist())
+                        labels = labels.drop(labels.loc[labels['stopId'] == stopId].index.tolist())
         same_length_list.append((X_truncated, labels_truncated))
     return same_length_list
 

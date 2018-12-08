@@ -1,7 +1,9 @@
 """Contains Tools for Evaluating the Training Procedue and Helper Functions for Debugging and Documentation purpose"""
 import matplotlib.pyplot as plt
-import tensorflow as tf
+from keras.models import Sequential
 import math
+import numpy as np
+from matplotlib2tikz import save as tikz_save
 
 def calculateConfusionMatrix(labels, predictions):
     confusion = tf.confusion_matrix(labels, predictions)
@@ -15,3 +17,22 @@ def calculateMCC(confusionMatrix):
     fn = confusionMatrix[1,0]
     mcc = (tp*tn - fp*fn) / math.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
     return mcc
+
+def plot_loss_history(histories, epochs, name, path):
+    vaL_loss = np.zeros((epochs, 1))
+    train_loss = np.zeros((epochs, 1))
+    for history in histories:
+        vaL_loss = vaL_loss + np.array(history.history['val_loss'])
+        train_loss = train_loss + np.array(history.history['loss'])
+    plt.plot(train_loss)
+    plt.plot(vaL_loss)
+    plt.title('model_loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    tikz_save(path + name+'.tex')
+
+def eval_all(histories, epochs, name, model, path):
+    plot_loss_history(histories, epochs, name, path)
+    model.save(path + name + 'model.h5')
+    json_string = model.to_json()

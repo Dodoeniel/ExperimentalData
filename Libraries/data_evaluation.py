@@ -33,6 +33,9 @@ def get_overall_results(test_data, model):
         FN += FN_loop
         TP += TP_loop
         TN += TN_loop
+    print('\nMCC: ' + str(get_MCC(FP, FN, TP, TN)))
+    print('\n' + str(TP) + '  ' + str(FN))
+    print('\n' + str(FP) + '  ' + str(TN))
     return FP, FN, TP, TN
 
 def get_MCC(FP, FN, TP, TN):
